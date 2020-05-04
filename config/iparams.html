@@ -1,0 +1,202 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Print App</title>
+    <link rel="stylesheet" type="text/css" href="https://static.freshdev.io/fdk/2.0/assets/freshservice.css">
+    <script src="https://static.freshdev.io/fdk/2.0/assets/fresh_client.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore-min.js"></script>
+    <style>
+        #danger-message {
+            display: none
+        }
+
+        #success {
+            display: none
+        }
+
+        h3 {
+            margin-bottom: 22px;
+            margin-top: 0;
+        }
+
+        #loading {
+            margin-top: 40vh;
+            text-align: center;
+        }
+
+        .myCheckMark {
+            height: 25px;
+            width: 25px;
+            background-color: #ccc;
+            display: inline-block;
+            margin-right: 5px;
+            position: relative;
+            top: 3px;
+            cursor: pointer;
+        }
+
+        .myCheckMark.checked,
+        .myCheckMark.minus {
+            background-color: #2196F3;
+        }
+
+        .myCheckMark.checked i {
+            position: absolute;
+            left: 10px;
+            top: 7px;
+            width: 5px;
+            height: 10px;
+            border: solid #fff;
+            border-width: 0 3px 3px 0;
+            -webkit-transform: rotate(45deg);
+            -ms-transform: rotate(45deg);
+            transform: rotate(45deg);
+            display: block;
+        }
+
+        .myCheckMark.minus i {
+            position: absolute;
+            left: 10px;
+            top: 7px;
+            /* width: 5px; */
+            height: 10px;
+            border: solid #fff;
+            border-width: 0 3px 3px 0;
+            -webkit-transform: rotate(90deg);
+            -ms-transform: rotate(90deg);
+            transform: rotate(90deg);
+        }
+
+        #installation {
+            display: none
+        }
+
+        .fserv-control {
+            display: none;
+        }
+    </style>
+
+</head>
+
+<body>
+    <div class="requester-fields">
+        <div class="alert alert-danger" id="danger-message">Invalid credentials. Please Try again</div>
+        <div class="alert alert-danger" id="danger-msg">Please fill the API key and Domain</div>
+        <div class="alert alert-success" id="success">Validation Success</div>
+        <div id="installation" class="tabcontent">
+            <form id="configuration_form">
+                <div class="fserv-form">
+                    <div class="fserv-field fserv-required">
+                        <label class="fserv-label">Api key</label><input class="fserv-input-text" id="apiKey"
+                            name="apiKey" data-secret="false" type="text">
+                        <div class="fserv-control"></div>
+                        <label class="fserv-hint">Please enter the api-key</label>
+                    </div>
+                    <div class="fserv-field fserv-required">
+                        <label class="fserv-label">Domain</label><input class="fserv-input-text" id="domain"
+                            name="domain" data-secret="false" type="text">
+                        <div class="fserv-control"></div>
+                        <label class="fserv-hint">Please enter domain like
+                            domainname.subdomain.com</label>
+                    </div>
+                    <div class="fserv-field fserv-required">
+                        <button id="submitButton" type="button" class="btn btn-primary">Verify</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+    </div>
+    <script type="text/javascript">
+
+        $('#danger-message').hide();
+        let validation = false;
+        $(function () {
+            app.initialized()
+                .then(function (_client) {
+                    window.client = _client;
+                    $('#installation').show();
+                    $('#danger-msg').hide();
+                    $('#submitButton').on('click', function () {
+                        $('#danger-message').hide();
+                        iparam_obj.domain = $('#domain').val();
+                        iparam_obj.apiKey = $('#apiKey').val();
+                        iparam_obj.validateAPI();
+                        return false;
+                    });
+                });
+        });
+        var iparam_obj = {
+            ticket_fields: [],
+            domain: "",
+            apiKey: "",
+            validateAPI: function () {
+                $('#danger-message').hide();
+                this.requestApi({
+                    method: 'get',
+                    url: '/api/v2/ticket_fields'
+                }).then(function (ticket_fields) {
+                    $('#success').show().slideDown('slow').delay(2000).slideUp('slow');
+                    $('#danger-message').hide();
+                    validation = true;
+                }).catch(function (data) {
+                    if (iparam_obj.domain == '' || iparam_obj.apiKey == '') {
+                        $('#danger-msg').show().slideDown('slow').delay(2000).slideUp('slow');;
+                        $('#danger-message').hide();
+                    }
+                    else {
+                        $('#danger-message').show().slideDown('slow').delay(2000).slideUp('slow');;
+                    }
+                    $('#success').hide();
+                });
+            },
+            requestApi: function (options) {
+                let api = this.apiKey, url = this.domain + options.url;
+                url = url.startsWith('https://') ? url : 'https://' + url;
+                return new Promise(function (resolve, reject) {
+                    var opt = {
+                        headers: {
+                            "Authorization": "Basic " + btoa(api),
+                            "Content-Type": "application/json; charset=utf-8"
+                        }
+                    };
+                    if ('body' in options) {
+                        opt['body'] = JSON.stringify(options.body);
+                    }
+                    client.request[options.method](url, opt).then(resolve,
+                        reject);
+                });
+            }
+        }
+        function validate() {
+            return validation;
+        }
+        function getConfigs(config) {
+            iparam_obj.apiKey = config.apiKey;
+            iparam_obj.domain = config.domain;
+            $('#apiKey').val(iparam_obj.apiKey);
+            $('#domain').val(iparam_obj.domain);
+        }
+        function postConfigs() {
+            var apiKey = iparam_obj.apiKey;
+            var configs = {
+                __meta: {
+                    secure: ["apiKey"]
+                },
+                apiKey, 
+                domain: iparam_obj.domain
+            };
+            return configs;
+        }
+
+
+    </script>
+</body>
+
+</html>
